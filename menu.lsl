@@ -879,7 +879,7 @@ default {
                 }
                 g_newCarer = "";
             }
-            else if(~llListFindList(g_ButtonizedAvatars,[msg]) && userRank == 0) { //Start of Caretaker handling
+            else if((~llListFindList(g_ButtonizedAvatars,[msg])) && userRank == 0) { //Start of Caretaker handling
                 if(g_addRemove == 1) { //Adding a carer
                     integer temp = llListFindList(g_ButtonizedAvatars,[msg]);
                     g_newCarer = llList2String(g_detectedAvatars,temp);
@@ -892,7 +892,7 @@ default {
                 }
 
             }
-            else if(~llListFindList(g_ButtonCarers,[msg]) && userRank == 0) {
+            else if((~llListFindList(g_ButtonCarers,[msg])) && userRank == 0) {
                 if(g_addRemove == 0) {// Deleting a carer
                     removeCarer(msg);
                     g_addRemove = -1;
@@ -1080,6 +1080,24 @@ default {
                 return;
             }
             sendSettings();
+            return;
+        }
+
+        if(num <= 5 && num > 0) { // Carer List or a "List is Full" Message
+            if(msg != "I'm sorry! There is no more room for carers, please delete one.") { // Valid send
+                if(msg != "") {
+                    list tempList = llCSV2List(msg);
+                    g_Carers += tempList;
+                    makeButtonsForCarers();
+                }
+            }
+            else { // No more room for carers!
+                llOwnerSay(msg);
+                return;   
+            }
+        }
+        else if(num == 6) { // Settings!
+            parseSettings(msg); // Pulls apart msg to set appropriate values for this script.
             return;
         }
     }//End of link_message(integer, integer, string, key)
