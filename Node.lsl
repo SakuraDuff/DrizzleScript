@@ -23,6 +23,7 @@ the software together, so everyone has access to something potentially excellent
 *  to the object with Menu.lsl in it. 
 */
 
+//todo: update the code so as to not rely on hard coded 5 nodes- instead allow SaveSettings (which is the final node) to report that it has reached the end of the carer list
 integer myNum;
 
 //quick and dirty integer scrape from the script name to assign to myNum
@@ -37,8 +38,6 @@ integer getMyNum() {
 //relevant LSL limits:
 //-the longest SL name possible is 63 characters including the space in between
 //-the maximum length of prim description is 127 characters, long enough to store at least 2 carers
-//-WHY DOES THE CODE ALLOW FOR A MAXIMUM OF 8?
-//Current code only stores one carer per prim description
 integer getListSize() {
     string storedData = llGetObjectDesc();
     if(storedData == "") {// Empty
@@ -51,11 +50,12 @@ integer getListSize() {
     }
 }
 
-updateColors(integer size) {
-    if(size < 4) {
+updateColors() {
+    integer size = getListSize();
+    if(size < 1) {
         llSetColor(<0.0, 1.0, 0.0>, ALL_SIDES);
     }
-    else if(size >= 4 && size <= 6) {
+    else if(size == 1) {
         llSetColor(<1.0, 1.0, 0.0>, ALL_SIDES);   
     }
     else {
@@ -64,7 +64,7 @@ updateColors(integer size) {
 }
 
 integer isFull() {
-    if(getListSize() >= 8) {
+    if(getListSize() >= 2) {
         return TRUE;
     }
     else {
@@ -95,19 +95,23 @@ saveInfo(string msg) {
         storedData += msg;
         llSetObjectDesc(storedData);
     }
-    else if(size < 8) {//1, 2, 3
+    else {
         storedData += "," + msg;
         llSetObjectDesc(storedData);
     }
-    updateColors(size);
 }
 
 forwardMessage(string msg) {
     llMessageLinked(LINK_ALL_CHILDREN, myNum+1, msg, NULL_KEY);
 }
 
+wipeList() {
+    llSetObjectDesc("");
+    llMessageLinked(LINK_ALL_CHILDREN, myNum+1, "WIPE", NULL_KEY);
+}
+
 sendList() {
-    //Safe for 1 -> 11, their numbers will tell main what to do.
+    //Safe for 1 -> 5, their numbers will tell main what to do.
     
     llMessageLinked(LINK_ROOT, myNum, llGetObjectDesc(), NULL_KEY); // Send main this object's list
     llMessageLinked(LINK_ALL_CHILDREN, myNum+1, "SEND", NULL_KEY); // Pass the message on to the next object
@@ -118,10 +122,13 @@ default {
         if(c & CHANGED_OWNER) {
             llSetObjectDesc("");
         }
+        updateColors();
     }
     
     state_entry() {
         myNum = getMyNum();
+        llOwnerSay((string)myNum); //debug
+        updateColors();
     }
 
     link_message(integer sender_num, integer num, string msg, key id) {
@@ -132,9 +139,16 @@ default {
             }
             return;   
         }
+        else if(msg == "WIPE") { //used to reset the carers
+            if(num == myNum) {
+                wipeList();
+                updateColors();
+            }
+        }
         else if(id) { // Valid key in message is used to delete
             if(num == myNum) {
                 removeInfo(msg, id);
+                updateColors();
                 return;
             }
         }
@@ -142,6 +156,7 @@ default {
             if(num == myNum) {
                 if(!isFull()) {
                     saveInfo(msg);
+                    updateColors();
                     return;
                 }
                 else {
